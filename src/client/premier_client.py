@@ -70,7 +70,7 @@ class PremierClient(HttpClient):
         body = {"command": {"inComm": command, "inParam": {"parameters": parameters or {}}}}
         try:
             raw = self.post(endpoint_path=self.ENDPOINT, json=body)
-        except requests.HTTPError as e:
+        except requests.RequestException as e:
             status = e.response.status_code if e.response is not None else None
             if status in (401, 403):
                 raise PremierAuthError(

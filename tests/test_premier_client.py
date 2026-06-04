@@ -51,3 +51,19 @@ def test_call_raises_client_error_on_400():
     client = make_client()
     with pytest.raises(PremierClientError):
         client.call("VERZEAPI")
+
+
+@responses.activate
+def test_call_raises_auth_error_on_403():
+    responses.add(responses.POST, BASE, status=403)
+    client = make_client()
+    with pytest.raises(PremierAuthError):
+        client.call("VERZEAPI")
+
+
+@responses.activate
+def test_call_wraps_connection_error_as_client_error():
+    responses.add(responses.POST, BASE, body=requests.exceptions.ConnectionError("server unreachable"))
+    client = make_client()
+    with pytest.raises(PremierClientError):
+        client.call("VERZEAPI")
