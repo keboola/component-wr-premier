@@ -1,11 +1,7 @@
 import sys
 from pathlib import Path
 
-import pytest
-
 sys.path.append(str(Path(__file__).resolve().parent.parent / "src"))
-
-from keboola.component.exceptions import UserException
 
 from configuration import Configuration
 
@@ -29,10 +25,10 @@ def test_valid_config_parses_and_maps_secret():
     assert cfg.continue_on_error is True  # default
 
 
-def test_missing_password_raises_userexception():
+def test_missing_password_defaults_to_empty():
     data = {k: v for k, v in VALID.items() if k != "#password"}
-    with pytest.raises(UserException):
-        Configuration(**data)
+    cfg = Configuration(**data)
+    assert cfg.password == ""  # presence enforced at run()/sync-action, not construction
 
 
 def test_missing_command_is_allowed_at_construction():

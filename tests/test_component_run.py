@@ -176,6 +176,16 @@ def test_missing_mapped_column_raises(tmp_path):
             _run(data_dir)
 
 
+def test_missing_connection_field_raises(tmp_path):
+    data_dir = _write_datadir(tmp_path, [{"doc": "FV1", "vs": "2024001"}])
+    cfg = json.loads((data_dir / "config.json").read_text())
+    cfg["parameters"]["host"] = ""
+    (data_dir / "config.json").write_text(json.dumps(cfg))
+    with mock.patch("component.PremierClient"):
+        with pytest.raises(UserException):
+            _run(data_dir)
+
+
 def test_missing_command_raises(tmp_path):
     data_dir = _write_datadir(tmp_path, [{"doc": "FV1", "vs": "2024001"}], command=None)
     with mock.patch("component.PremierClient"):

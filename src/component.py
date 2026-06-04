@@ -29,10 +29,11 @@ class Component(ComponentBase):
     def __init__(self):
         super().__init__()
 
-    def run(self):
+    def run(self) -> None:
         params = Configuration(**self.configuration.parameters)
         if not params.command:
             raise UserException("No PREMIER command selected for this configuration row.")
+        self._require_connection(params)
         client = self._build_client(params)
 
         input_tables = self.get_input_tables_definitions()
@@ -50,7 +51,7 @@ class Component(ComponentBase):
         written_keys: list[str] = list(state.get("written_keys", []))
         already = set(written_keys)
 
-        results_def = self.create_out_table_definition(RESULTS_TABLE, schema=RESULTS_COLUMNS)
+        results_def = self.create_out_table_definition(RESULTS_TABLE, schema=RESULTS_COLUMNS, write_always=True)
         successes = 0
         failures = 0
         skipped = 0
@@ -100,8 +101,12 @@ class Component(ComponentBase):
                             )
         finally:
             # Always persist progress + manifest, no matter how the loop exited.
-            self.write_manifest(results_def)
-            self.write_state_file({"written_keys": written_keys})
+            # Guard so a secondary error here does not mask a propagating UserException.
+            try:
+                self.write_manifest(results_def)
+                self.write_state_file({"written_keys": written_keys})
+            except Exception:
+                logging.exception("Failed to persist results manifest / state file.")
 
         logging.info(
             "PREMIER writer finished: %d succeeded, %d failed, %d skipped.",
@@ -114,11 +119,26 @@ class Component(ComponentBase):
             raise UserException(f"All {failures} rows failed to write to PREMIER. See the results table.")
 
     @staticmethod
-    def _result(idx: int, dedup_key, status: str, message: str) -> dict:
+    def _require_connection(params: Configuration) -> None:
+        missing = [
+            name
+            for name, value in (
+                ("host", params.host),
+                ("username", params.username),
+                ("#password", params.password),
+                ("accounting unit (ID-UJ)", params.id_uj),
+            )
+            if not value
+        ]
+        if missing:
+            raise UserException(f"Missing required connection setting(s): {', '.join(missing)}.")
+
+    @staticmethod
+    def _result(idx: int, dedup_key: str | None, status: str, message: str) -> dict:
         return {"row_index": idx, "dedup_key": dedup_key or "", "status": status, "message": message}
 
     @staticmethod
-    def _validate_columns(fieldnames, mapping: dict, dedup_key_column) -> None:
+    def _validate_columns(fieldnames: list[str] | None, mapping: dict[str, str], dedup_key_column: str | None) -> None:
         cols = set(fieldnames or [])
         missing = [c for c in mapping if c not in cols]
         if missing:
@@ -141,6 +161,7 @@ class Component(ComponentBase):
     @sync_action("testConnection")
     def test_connection(self) -> ValidationResult:
         params = Configuration(**self.configuration.parameters)
+        self._require_connection(params)
         client = self._build_client(params)
         try:
             client.test_connection()
@@ -151,6 +172,7 @@ class Component(ComponentBase):
     @sync_action("listCommands")
     def list_commands(self) -> list[SelectElement]:
         params = Configuration(**self.configuration.parameters)
+        self._require_connection(params)
         client = self._build_client(params)
         try:
             commands = client.list_write_commands()

@@ -11,12 +11,12 @@ class ColumnMap(BaseModel):
 
 class Configuration(BaseModel):
     # --- connection / auth (config level) ---
-    host: str
+    host: str = ""
     port: int = 443
     use_https: bool = True
-    username: str
-    password: str = Field(alias="#password")
-    id_uj: str
+    username: str = ""
+    password: str = Field(default="", alias="#password")
+    id_uj: str = ""
     max_retries: int = 5
 
     # --- write target (row level) ---

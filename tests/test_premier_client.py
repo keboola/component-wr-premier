@@ -162,6 +162,14 @@ def test_list_write_commands_skips_entries_without_nazov():
 
 
 @responses.activate
+def test_call_raises_on_non_dict_response():
+    responses.add(responses.POST, BASE, json=["not", "a", "dict"], status=200)
+    client = make_client()
+    with pytest.raises(PremierClientError):
+        client.call("VERZEAPI")
+
+
+@responses.activate
 def test_test_connection_propagates_auth_error():
     responses.add(responses.POST, BASE, status=401)
     client = make_client()

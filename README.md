@@ -43,9 +43,19 @@ to PREMIER, with the row's columns mapped to PREMIER parameters.
 
 PREMIER write commands are **create-only with no idempotency key**, so re-running could create
 duplicate documents. If `dedup_key_column` is set, the component records each successfully-written
-key in `state.json` and skips those rows on subsequent runs. **If `dedup_key_column` is left empty,
-every run re-sends every row — risking duplicates.** Written keys are persisted on every exit path,
-including partial failures.
+key (`written_keys`) and skips those rows on subsequent runs. **If `dedup_key_column` is left empty,
+every run re-sends every row — risking duplicates.**
+
+Dedup state durability:
+
+- On **successful** completion the platform persists the state file. The normal
+  `continue_on_error=true` path completes successfully (recording per-row `OK`/`ERR`), so
+  `written_keys` is saved.
+- On a **hard abort** — the first failure with `continue_on_error=false`, or a connection/auth error
+  (exit 1) — the platform does **not** persist the state file. A subsequent re-run may therefore
+  re-send rows that were written just before the abort.
+- The `results` table is written with `write_always`, so it is still uploaded on failure for
+  inspection even when the state file is not persisted.
 
 ## Results table
 

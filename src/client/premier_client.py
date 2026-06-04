@@ -11,7 +11,7 @@ class PremierResponse:
     """Parsed PREMIER ApiComPrem response envelope."""
 
     result: str
-    data: list = field(default_factory=list)
+    data: list[dict] = field(default_factory=list)
     errors: list[dict] = field(default_factory=list)
     warnings: list[dict] = field(default_factory=list)
 
@@ -77,6 +77,8 @@ class PremierClient(HttpClient):
             if status in (401, 403):
                 raise PremierAuthError(f"PREMIER rejected the credentials or ID-UJ (HTTP {status}).") from e
             raise PremierClientError(f"PREMIER API request failed (HTTP {status}).") from e
+        if not isinstance(raw, dict):
+            raise PremierClientError("Unexpected PREMIER API response (expected a JSON object).")
         return PremierResponse.from_dict(raw)
 
     def test_connection(self) -> None:
