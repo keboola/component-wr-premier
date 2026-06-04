@@ -164,10 +164,26 @@ false pass).
 **Evidence:** _
 
 ### Phase 8 — Final CF-standards review · owner: `component-review`
-- [ ] complete
+- [x] complete
 
 **Definition of done:** `component-review` run over the full implementation; no open **blocking**
 (critical/important) findings; component aligns with Component Factory standards.
+
+**Evidence:** Verified 2026-06-04. Ran the full component-review (12 specialist agents + validator).
+Validator dropped 8 false positives (both logging findings matched the cookiecutter template; the
+suggested `extra="forbid"` would have broken sync actions; the test-connection `options.async` is the
+canonical pattern; client-in-`__init__` / run()-length aren't in any cited rule). Verdict
+REQUEST_CHANGES on real items, all fixed in commit `78679fa`: (1) credential fields default to `""`
+so sync actions don't crash on a partial form + `_require_connection()` enforces presence in run() and
+both sync actions; (2) results table `write_always=True` (survives exit-1 per output-mapping.md);
+(3) non-dict API response guarded → PremierClientError; (4) `finally` persistence wrapped so it can't
+mask a UserException; (5) typing hints; (6) README corrected re dedup durability (state persists on
+success/`continue_on_error=true`, NOT on a hard exit-1 abort). `uv run pytest -q` → **31 passed**;
+`ruff check` clean. No open blocking findings.
+
+> **Known limitation (tracked, not blocking — no users yet):** dedup `state.json` is not persisted by
+> the platform on an exit-1 abort, so the fail-fast / connection-error paths may re-send rows on rerun.
+> Documented in README. A durable-ledger redesign can be a follow-up.
 
 > **If you cut a release after Phase 6** (e.g. promoting the reviewed component to a stable version),
 > the CI property-sync runs again and overwrites the `[script]` portal properties from the repo —
