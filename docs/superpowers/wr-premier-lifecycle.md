@@ -122,14 +122,20 @@ Remaining for later phases: VCR cassettes (Phase 5) must verify the API-contract
 (inParam.parameters nesting, INFO/typ_prikazu, VERZEAPI probe) against real responses.
 
 ### Phase 5 — Local VCR tests + cassettes · owner: `component-test`
-- [ ] complete
+- [x] complete
 
 **Definition of done:** datadir/unit/VCR tests present; the **full `pytest` suite runs green** (paste
 the `N passed` line, not "should pass"); cassettes recorded and **verifiably sanitized** — grep every
 cassette for secret patterns (the values from `secrets.json`, common keys like `token`/`password`/
 `authorization`/`api_key`, and the configured `VCR_SANITIZERS` targets) and paste a clean result.
 
-**Evidence:** _
+**Evidence:** Verified 2026-06-04 (commit `07703b2`). VCR read-path functional cases recorded against
+`dev.premier.cz:12375`: `01_testConnection` (VERZEAPI) + `02_listCommands` (INFO/FULL, 22 IN commands).
+`VCRDataDirTester` runner; `VCR_SANITIZERS` in component.py. `uv run pytest -q` → **29 passed**;
+`ruff check` clean. Cassette grep for `3ce17312` / `Authorization` / `ID-UJ` / password → **no matches**.
+**Recording caught a real contract bug:** the live API returns `Data[0]["CommList"]` of `{CMD:{...}}`
+envelopes (NOT a flat list); `list_write_commands()` was fixed to unwrap/flatten it and unit-test mocks
+updated to the real shape. Write-path cassettes intentionally deferred (no blind sandbox writes).
 
 ### Phase 6 — Full Developer Portal value setup · owner: `component-dev-portal`
 - [ ] complete
