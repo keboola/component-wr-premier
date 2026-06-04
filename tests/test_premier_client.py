@@ -67,3 +67,18 @@ def test_call_wraps_connection_error_as_client_error():
     client = make_client()
     with pytest.raises(PremierClientError):
         client.call("VERZEAPI")
+
+
+@responses.activate
+def test_test_connection_ok():
+    responses.add(responses.POST, BASE, json={"Result": "OK", "Data": [{"verze": "1.0.1.280"}]}, status=200)
+    client = make_client()
+    client.test_connection()  # must not raise
+
+
+@responses.activate
+def test_test_connection_err_result_raises():
+    responses.add(responses.POST, BASE, json={"Result": "ERR", "Error": [{"desc": "bad unit"}]}, status=200)
+    client = make_client()
+    with pytest.raises(PremierClientError):
+        client.test_connection()

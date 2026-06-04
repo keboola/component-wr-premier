@@ -78,3 +78,11 @@ class PremierClient(HttpClient):
                 ) from e
             raise PremierClientError(f"PREMIER API request failed (HTTP {status}).") from e
         return PremierResponse.from_dict(raw)
+
+    def test_connection(self) -> None:
+        """Validate host reachability + Basic auth + ID-UJ via a harmless read command."""
+        resp = self.call("VERZEAPI")
+        if not resp.is_ok:
+            raise PremierClientError(
+                f"PREMIER connection check failed: {resp.error_message or 'unexpected response'}"
+            )
