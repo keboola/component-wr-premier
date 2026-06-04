@@ -77,23 +77,31 @@ other — both only need Phases 1–5), either order is fine.
 - Portal `repository.tag` = `0.0.1`, uri `…/developer-portal-v2/keboola.wr-premier`.
 
 ### Phase 2 — Research the source/target system · owner: `component-plan-new`
-- [ ] complete
+- [x] complete
 
 **Definition of done:** a research summary settles API style(s), auth method(s) and which the vendor
 recommends, pagination, rate limits, incremental/cursor support — plus a **feasibility & provisioning
 verdict** (sandbox availability, headless-auth vs admin-only setup). Blockers surfaced to the user.
 
-**Evidence:** _
+**Evidence:** Verified 2026-06-04 by fresh subagent against the spec. API style = custom JSON-RPC over
+HTTPS POST `/api/comm` (live-verified contract). Auth = HTTP Basic + `ID-UJ` header (only method
+exposed). No pagination/batch on writes; rate limits none documented; no incremental (create-only, no
+idempotency → state.json dedup strategy). Provisioning = NOT headless on customer side (admin installs
+ApiComPrem service, generates ID_UJ); sandbox `dev.premier.cz:12375` reachable for reads, writes
+unconfirmed, no customer creds yet. 6 ranked blockers in spec §9.
 
 ### Phase 3 — Spec + implementation plan · owner: `component-plan-new`
-- [ ] complete
+- [x] complete
 
 **Definition of done:** `docs/superpowers/specs/...-design.md` committed (full scope: source system,
 Keboola mapping, auth/provisioning, data model, config/schema, code architecture, datadir + VCR
 tests, cf-dev deployment, risks) with **no placeholders/TODOs**, AND a superpowers plan committed at
 `docs/superpowers/plans/...md`. User approved the spec.
 
-**Evidence:** _
+**Evidence:** Verified 2026-06-04 by fresh subagent. Spec `06fa5ad` (all 9 sections, zero placeholder
+grep matches) + plan `8ed7e85` (13 bite-sized TDD tasks with real failing-test + implementation code;
+imports/method names consistent across tasks; schema↔Pydantic parity cross-checked in Task 11). User
+approved the spec by invoking `/superpowers:writing-plans`.
 
 ### Phase 4 — Implement on `initial-implementation` branch · owner: `component-develop`
 - [ ] complete
