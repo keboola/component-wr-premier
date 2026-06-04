@@ -102,3 +102,15 @@ def test_list_write_commands_filters_to_in_type():
     client = make_client()
     commands = client.list_write_commands()
     assert commands == ["FA_OUT_ADD", "PARTNERI_ADD"]
+
+
+@responses.activate
+def test_write_returns_response_unchanged():
+    responses.add(responses.POST, BASE, json={"Result": "OK", "Data": [{"doc": 42}]}, status=200)
+    client = make_client()
+    resp = client.write("FA_OUT_ADD", {"DOKLAD": "FV1", "VARIABL": "2024001"})
+    assert resp.is_ok is True
+    body = responses.calls[0].request.body
+    body = body if isinstance(body, str) else body.decode()
+    assert '"inComm": "FA_OUT_ADD"' in body
+    assert '"VARIABL": "2024001"' in body

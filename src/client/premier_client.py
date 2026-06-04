@@ -99,3 +99,7 @@ class PremierClient(HttpClient):
             for item in resp.data
             if isinstance(item, dict) and item.get("typ_prikazu") == "IN" and item.get("nazov")
         ]
+
+    def write(self, command: str, parameters: dict) -> PremierResponse:
+        """Issue a single write/create command. The caller inspects `is_ok` / `error_message`."""
+        return self.call(command, parameters)
