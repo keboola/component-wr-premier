@@ -6,9 +6,20 @@ import logging
 from keboola.component.base import ComponentBase, sync_action
 from keboola.component.exceptions import UserException
 from keboola.component.sync_actions import SelectElement, ValidationResult
+from keboola.vcr import DefaultSanitizer
 
 from client.premier_client import PremierAuthError, PremierClient, PremierClientError
 from configuration import Configuration
+
+# Scrub credentials from every cassette interaction:
+#   - DefaultSanitizer strips the Authorization header (not in the safe-header whitelist)
+#     and the ID-UJ header (ditto), and redacts #password / username body fields.
+#   - additional_sensitive_fields covers id_uj if it appears as a JSON key in bodies.
+VCR_SANITIZERS = [
+    DefaultSanitizer(
+        additional_sensitive_fields=["id_uj", "username"],
+    ),
+]
 
 RESULTS_TABLE = "results.csv"
 RESULTS_COLUMNS = ["row_index", "dedup_key", "status", "message"]

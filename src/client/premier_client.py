@@ -86,14 +86,31 @@ class PremierClient(HttpClient):
             raise PremierClientError(f"PREMIER connection check failed: {resp.error_message or 'unexpected response'}")
 
     def list_write_commands(self) -> list[str]:
-        """Return the live catalog of write (`typ_prikazu == "IN"`) command names via INFO."""
+        """Return the live catalog of write (``typ_prikazu == "IN"``) command names via INFO.
+
+        The PREMIER API returns ``Data`` as a one-element list whose single item has the
+        shape ``{"CommList": [{"<CMD>": {"nazov": "<CMD>", "typ_prikazu": "IN|OUT", ...}}, ...]}``.
+        We unwrap that envelope and flatten each ``{"<CMD>": {...}}`` entry into the inner dict.
+        """
         resp = self.call("INFO", {"prikaz": "FULL"})
         if not resp.is_ok:
             raise PremierClientError(f"Could not list PREMIER commands: {resp.error_message or 'unexpected response'}")
+
+        # Unwrap the CommList envelope: Data[0]["CommList"] is the actual command list.
+        comm_list: list[dict] = []
+        if resp.data and isinstance(resp.data[0], dict):
+            raw_list = resp.data[0].get("CommList", [])
+            for entry in raw_list:
+                if isinstance(entry, dict):
+                    # Each entry is {"CMD_NAME": {nazov, typ_prikazu, ...}}
+                    for cmd_info in entry.values():
+                        if isinstance(cmd_info, dict):
+                            comm_list.append(cmd_info)
+
         return [
             str(item["nazov"])
-            for item in resp.data
-            if isinstance(item, dict) and item.get("typ_prikazu") == "IN" and item.get("nazov")
+            for item in comm_list
+            if item.get("typ_prikazu") == "IN" and item.get("nazov")
         ]
 
     def write(self, command: str, parameters: dict) -> PremierResponse:

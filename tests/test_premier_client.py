@@ -86,15 +86,21 @@ def test_test_connection_err_result_raises():
 
 @responses.activate
 def test_list_write_commands_filters_to_in_type():
+    # Real PREMIER API wraps commands inside Data[0]["CommList"] where each entry is
+    # {"CMD_NAME": {"nazov": "CMD_NAME", "typ_prikazu": "IN|OUT", ...}}.
     responses.add(
         responses.POST,
         BASE,
         json={
             "Result": "OK",
             "Data": [
-                {"nazov": "FA_OUT_ADD", "typ_prikazu": "IN", "popis": "issued invoice"},
-                {"nazov": "INFO", "typ_prikazu": "OUT", "popis": "info"},
-                {"nazov": "PARTNERI_ADD", "typ_prikazu": "IN", "popis": "add partner"},
+                {
+                    "CommList": [
+                        {"FA_OUT_ADD": {"nazov": "FA_OUT_ADD", "typ_prikazu": "IN", "popis": "issued invoice"}},
+                        {"INFO": {"nazov": "INFO", "typ_prikazu": "OUT", "popis": "info"}},
+                        {"PARTNERI_ADD": {"nazov": "PARTNERI_ADD", "typ_prikazu": "IN", "popis": "add partner"}},
+                    ]
+                }
             ],
         },
         status=200,
@@ -118,16 +124,35 @@ def test_write_returns_response_unchanged():
 
 @responses.activate
 def test_list_write_commands_handles_empty_and_malformed_data():
+    # Data with missing / empty CommList → returns empty list without error.
+    responses.add(
+        responses.POST,
+        BASE,
+        json={
+            "Result": "OK",
+            "Data": [{}],  # CommList key absent
+        },
+        status=200,
+    )
+    client = make_client()
+    assert client.list_write_commands() == []
+
+
+@responses.activate
+def test_list_write_commands_skips_entries_without_nazov():
     responses.add(
         responses.POST,
         BASE,
         json={
             "Result": "OK",
             "Data": [
-                "not-a-dict",
-                {"typ_prikazu": "IN"},  # missing nazov -> skipped
-                {"nazov": "", "typ_prikazu": "IN"},  # empty nazov -> skipped
-                {"nazov": "SKLAD_ADD", "typ_prikazu": "IN"},  # kept
+                {
+                    "CommList": [
+                        {"SKLAD_ADD": {"nazov": "SKLAD_ADD", "typ_prikazu": "IN"}},
+                        {"NO_NAZOV": {"typ_prikazu": "IN"}},  # missing nazov → skipped
+                        {"EMPTY_NAZOV": {"nazov": "", "typ_prikazu": "IN"}},  # empty → skipped
+                    ]
+                }
             ],
         },
         status=200,
