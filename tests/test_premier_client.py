@@ -82,3 +82,23 @@ def test_test_connection_err_result_raises():
     client = make_client()
     with pytest.raises(PremierClientError):
         client.test_connection()
+
+
+@responses.activate
+def test_list_write_commands_filters_to_in_type():
+    responses.add(
+        responses.POST,
+        BASE,
+        json={
+            "Result": "OK",
+            "Data": [
+                {"nazov": "FA_OUT_ADD", "typ_prikazu": "IN", "popis": "issued invoice"},
+                {"nazov": "INFO", "typ_prikazu": "OUT", "popis": "info"},
+                {"nazov": "PARTNERI_ADD", "typ_prikazu": "IN", "popis": "add partner"},
+            ],
+        },
+        status=200,
+    )
+    client = make_client()
+    commands = client.list_write_commands()
+    assert commands == ["FA_OUT_ADD", "PARTNERI_ADD"]

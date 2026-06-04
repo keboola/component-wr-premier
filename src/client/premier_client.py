@@ -86,3 +86,16 @@ class PremierClient(HttpClient):
             raise PremierClientError(
                 f"PREMIER connection check failed: {resp.error_message or 'unexpected response'}"
             )
+
+    def list_write_commands(self) -> list[str]:
+        """Return the live catalog of write (`typ_prikazu == "IN"`) command names via INFO."""
+        resp = self.call("INFO", {"prikaz": "FULL"})
+        if not resp.is_ok:
+            raise PremierClientError(
+                f"Could not list PREMIER commands: {resp.error_message or 'unexpected response'}"
+            )
+        return [
+            str(item["nazov"])
+            for item in resp.data
+            if isinstance(item, dict) and item.get("typ_prikazu") == "IN" and item.get("nazov")
+        ]
