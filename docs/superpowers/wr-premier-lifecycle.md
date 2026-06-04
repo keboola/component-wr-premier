@@ -138,7 +138,15 @@ envelopes (NOT a flat list); `list_write_commands()` was fixed to unwrap/flatten
 updated to the real shape. Write-path cassettes intentionally deferred (no blind sandbox writes).
 
 ### Phase 6 — Full Developer Portal value setup · owner: `component-dev-portal`
-- [ ] complete
+- [x] complete
+
+**Evidence:** 2026-06-04. Patched the portal (user-run TTY `kbagent dev-portal patch --data …`) and
+confirmed live via `kbagent dev-portal get --app keboola.wr-premier`: `configurationSchema` (PREMIER
+Connection & Auth — host/port/use_https/username/#password/id_uj/test_connection/max_retries),
+`configurationRowSchema` (command via listCommands select, column_mapping table, dedup_key_column,
+continue_on_error), short/long/configuration descriptions, `actions: [testConnection, listCommands]`,
+and `uiOptions: [genericDockerUI, genericDockerUI-rows]`. The UI config form now renders correctly.
+(These `[script]` props will re-sync identically from `component_config/` on the next release.)
 
 **Definition of done — MUST happen *after* the `0.0.1` release:** configSchema (and row schema if
 config rows), sync actions, and the portal-owned properties (descriptions, UI options, etc.) are live
@@ -161,7 +169,11 @@ to that branch build; a real job run **succeeded** end-to-end. Evidence must inc
 `initial-implementation` build, not a stale stable release (a green job against the wrong image is a
 false pass).
 
-**Evidence:** _
+**Evidence — PARTIAL (deployment ✅, functional smoke ❌ blocked by environment, not code):** 2026-06-04.
+- ✅ Branch image `initial-implementation-9` (commit `3a6d60b`) built + pushed to ECR.
+- ✅ cf-dev config `01kt9aegh8ek5eq6xt957rzqzs` created (project 4214) with `runtime.tag=initial-implementation-9`, encrypted `#password`; portal actions registered; image tag resolves to the branch build.
+- ❌ `testConnection` / `listCommands` sync actions **time out (~48s)** — the Keboola **GCP runner cannot reach `dev.premier.cz:12375`** (egress to external host on a non-standard port is blocked). NOT a component bug: the component starts and is recognized; the same calls succeed locally (`curl`) and in the VCR tests. This is the same on-prem reachability constraint as spec §9 risk #1.
+- A genuine end-to-end smoke needs a PREMIER instance reachable from the Keboola stack (a customer/partner instance, or an allow-listed network path) — not available for this public sandbox.
 
 ### Phase 8 — Final CF-standards review · owner: `component-review`
 - [x] complete
