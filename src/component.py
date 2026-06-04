@@ -44,44 +44,54 @@ class Component(ComponentBase):
         failures = 0
         skipped = 0
 
-        with (
-            open(input_table.full_path, encoding="utf-8") as inp,
-            open(results_def.full_path, "w", encoding="utf-8", newline="") as out,
-        ):
-            reader = csv.DictReader(inp)
-            self._validate_columns(reader.fieldnames, mapping, params.dedup_key_column)
-            writer = csv.DictWriter(out, fieldnames=RESULTS_COLUMNS)
-            writer.writeheader()
+        try:
+            with (
+                open(input_table.full_path, encoding="utf-8") as inp,
+                open(results_def.full_path, "w", encoding="utf-8", newline="") as out,
+            ):
+                reader = csv.DictReader(inp)
+                self._validate_columns(reader.fieldnames, mapping, params.dedup_key_column)
+                writer = csv.DictWriter(out, fieldnames=RESULTS_COLUMNS)
+                writer.writeheader()
 
-            for idx, row in enumerate(reader):
-                dedup_key = row.get(params.dedup_key_column) if params.dedup_key_column else None
+                for idx, row in enumerate(reader):
+                    # A blank dedup cell means "no dedup for this row" (do not collapse blanks together).
+                    dedup_key = (row.get(params.dedup_key_column) or None) if params.dedup_key_column else None
 
-                if dedup_key is not None and dedup_key in already:
-                    skipped += 1
-                    writer.writerow(self._result(idx, dedup_key, "SKIPPED", "already written (state)"))
-                    continue
+                    if dedup_key is not None and dedup_key in already:
+                        skipped += 1
+                        writer.writerow(self._result(idx, dedup_key, "SKIPPED", "already written (state)"))
+                        continue
 
-                parameters = {target: row.get(source, "") for source, target in mapping.items()}
-                resp = client.write(params.command, parameters)
-
-                if resp.is_ok:
-                    successes += 1
-                    if dedup_key is not None:
-                        written_keys.append(dedup_key)
-                        already.add(dedup_key)
-                    writer.writerow(self._result(idx, dedup_key, "OK", ""))
-                else:
-                    failures += 1
-                    writer.writerow(self._result(idx, dedup_key, "ERR", resp.error_message))
-                    if not params.continue_on_error:
-                        self.write_manifest(results_def)
-                        self.write_state_file({"written_keys": written_keys})
+                    parameters = {target: row.get(source, "") for source, target in mapping.items()}
+                    try:
+                        resp = client.write(params.command, parameters)
+                    except (PremierAuthError, PremierClientError) as e:
+                        # Transport/auth failure mid-run: abort cleanly (exit 1). The finally block
+                        # below persists the rows already written so a rerun skips them (no duplicates).
                         raise UserException(
-                            f"Write failed on row {idx} (dedup key {dedup_key!r}): {resp.error_message}"
-                        )
+                            f"PREMIER write aborted on row {idx} due to a connection/auth error: {e} "
+                            f"({successes} row(s) already written have been saved to state)."
+                        ) from e
 
-        self.write_manifest(results_def)
-        self.write_state_file({"written_keys": written_keys})
+                    if resp.is_ok:
+                        successes += 1
+                        if dedup_key is not None:
+                            written_keys.append(dedup_key)
+                            already.add(dedup_key)
+                        writer.writerow(self._result(idx, dedup_key, "OK", ""))
+                    else:
+                        failures += 1
+                        writer.writerow(self._result(idx, dedup_key, "ERR", resp.error_message))
+                        if not params.continue_on_error:
+                            raise UserException(
+                                f"Write failed on row {idx} (dedup key {dedup_key!r}): {resp.error_message}"
+                            )
+        finally:
+            # Always persist progress + manifest, no matter how the loop exited.
+            self.write_manifest(results_def)
+            self.write_state_file({"written_keys": written_keys})
+
         logging.info(
             "PREMIER writer finished: %d succeeded, %d failed, %d skipped.",
             successes,

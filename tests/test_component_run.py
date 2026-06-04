@@ -4,6 +4,8 @@ import sys
 from pathlib import Path
 from unittest import mock
 
+import pytest
+
 sys.path.append(str(Path(__file__).resolve().parent.parent / "src"))
 
 from keboola.component.exceptions import UserException
@@ -98,16 +100,77 @@ def test_dedup_skips_already_written(tmp_path):
     assert statuses == {"2024001": "SKIPPED", "2024002": "OK"}
 
 
-def test_fail_fast_raises(tmp_path):
-    data_dir = _write_datadir(tmp_path, [{"doc": "FV1", "vs": "2024001"}], continue_on_error=False)
+def test_fail_fast_persists_progress_and_raises(tmp_path):
+    data_dir = _write_datadir(
+        tmp_path,
+        [{"doc": "FV1", "vs": "2024001"}, {"doc": "FV2", "vs": "2024002"}],
+        continue_on_error=False,
+    )
+
+    def side_effect(command, params):
+        if params["VARIABL"] == "2024002":
+            return PremierResponse(result="ERR", errors=[{"desc": "nope"}])
+        return PremierResponse(result="OK")
+
     with mock.patch("component.PremierClient") as MockClient:
-        MockClient.return_value.write.return_value = PremierResponse(result="ERR", errors=[{"desc": "nope"}])
-        raised = False
-        try:
+        MockClient.return_value.write.side_effect = side_effect
+        with pytest.raises(UserException):
             _run(data_dir)
-        except UserException:
-            raised = True
-    assert raised is True
+    # progress persisted despite the raise
+    state = json.loads((data_dir / "out" / "state.json").read_text())
+    assert state["written_keys"] == ["2024001"]
+    statuses = {r["dedup_key"]: r["status"] for r in _read_results(data_dir)}
+    assert statuses["2024001"] == "OK"
+    assert statuses["2024002"] == "ERR"
+
+
+def test_transport_error_persists_state_and_raises(tmp_path):
+    from client.premier_client import PremierClientError
+
+    data_dir = _write_datadir(tmp_path, [{"doc": "FV1", "vs": "2024001"}, {"doc": "FV2", "vs": "2024002"}])
+
+    def side_effect(command, params):
+        if params["VARIABL"] == "2024002":
+            raise PremierClientError("server unreachable")
+        return PremierResponse(result="OK")
+
+    with mock.patch("component.PremierClient") as MockClient:
+        MockClient.return_value.write.side_effect = side_effect
+        with pytest.raises(UserException):
+            _run(data_dir)
+    state = json.loads((data_dir / "out" / "state.json").read_text())
+    assert state["written_keys"] == ["2024001"]  # row 1 saved before the transport error
+
+
+def test_blank_dedup_keys_are_not_collapsed(tmp_path):
+    data_dir = _write_datadir(tmp_path, [{"doc": "FV1", "vs": ""}, {"doc": "FV2", "vs": ""}])
+    with mock.patch("component.PremierClient") as MockClient:
+        MockClient.return_value.write.return_value = PremierResponse(result="OK")
+        _run(data_dir)
+        assert MockClient.return_value.write.call_count == 2  # both written, neither skipped
+    statuses = [r["status"] for r in _read_results(data_dir)]
+    assert statuses == ["OK", "OK"]
+
+
+def test_all_failed_raises(tmp_path):
+    data_dir = _write_datadir(tmp_path, [{"doc": "FV1", "vs": "2024001"}])
+    with mock.patch("component.PremierClient") as MockClient:
+        MockClient.return_value.write.return_value = PremierResponse(result="ERR", errors=[{"desc": "bad"}])
+        with pytest.raises(UserException):
+            _run(data_dir)
+    statuses = [r["status"] for r in _read_results(data_dir)]
+    assert statuses == ["ERR"]
+
+
+def test_missing_mapped_column_raises(tmp_path):
+    data_dir = _write_datadir(tmp_path, [{"doc": "FV1", "vs": "2024001"}])
+    # rewrite config to map a non-existent column
+    cfg = json.loads((data_dir / "config.json").read_text())
+    cfg["parameters"]["column_mapping"] = [{"source": "nonexistent", "target": "DOKLAD"}]
+    (data_dir / "config.json").write_text(json.dumps(cfg))
+    with mock.patch("component.PremierClient"):
+        with pytest.raises(UserException):
+            _run(data_dir)
 
 
 def test_missing_command_raises(tmp_path):
