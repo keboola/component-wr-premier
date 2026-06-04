@@ -1,1 +1,1 @@
-Enter the PREMIER connection details (host, port, username, password, and the accounting-unit `ID-UJ`) at the configuration level, then use **Test Connection** to verify them. In each row, pick the PREMIER write command (loaded live via **List Commands**), map your input-table columns to the command's PREMIER parameters, and optionally set a deduplication key column. Map exactly one input table per row.
+Enter the connection and click **Test Connection**. Then add one row per input table, pick the PREMIER command, and map your columns.

@@ -19,8 +19,9 @@
     "use_https": {
       "type": "boolean",
       "title": "Use HTTPS",
-      "default": true,
-      "propertyOrder": 3
+      "description": "Connect over HTTPS. Disable only for a plain-HTTP PREMIER endpoint.",
+      "propertyOrder": 3,
+      "default": true
     },
     "username": {
       "type": "string",
