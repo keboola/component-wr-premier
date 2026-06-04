@@ -1,0 +1,53 @@
+import sys
+from pathlib import Path
+
+import pytest
+import requests
+import responses
+
+sys.path.append(str(Path(__file__).resolve().parent.parent / "src"))
+
+from client.premier_client import PremierAuthError, PremierClient, PremierClientError
+
+BASE = "https://premier.example.com:12375/api/comm"
+
+
+def make_client():
+    return PremierClient(
+        host="premier.example.com",
+        port=12375,
+        use_https=True,
+        username="user",
+        password="pass",
+        id_uj="11111111-2222-3333-4444-555555555555",
+    )
+
+
+@responses.activate
+def test_call_sends_correct_envelope_and_parses_ok():
+    responses.add(responses.POST, BASE, json={"Result": "OK", "Data": [{"x": 1}]}, status=200)
+    client = make_client()
+    resp = client.call("VERZEAPI", {"foo": "bar"})
+    assert resp.is_ok is True
+    sent = responses.calls[0].request
+    body = sent.body if isinstance(sent.body, str) else sent.body.decode()
+    assert '"inComm": "VERZEAPI"' in body
+    assert '"foo": "bar"' in body
+    assert sent.headers["ID-UJ"] == "11111111-2222-3333-4444-555555555555"
+    assert sent.headers["Authorization"].startswith("Basic ")
+
+
+@responses.activate
+def test_call_raises_auth_error_on_401():
+    responses.add(responses.POST, BASE, status=401)
+    client = make_client()
+    with pytest.raises(PremierAuthError):
+        client.call("VERZEAPI")
+
+
+@responses.activate
+def test_call_raises_client_error_on_400():
+    responses.add(responses.POST, BASE, status=400)
+    client = make_client()
+    with pytest.raises(PremierClientError):
+        client.call("VERZEAPI")
