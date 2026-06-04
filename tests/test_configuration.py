@@ -35,7 +35,7 @@ def test_missing_password_raises_userexception():
         Configuration(**data)
 
 
-def test_missing_command_raises_userexception():
+def test_missing_command_is_allowed_at_construction():
     data = {k: v for k, v in VALID.items() if k != "command"}
-    with pytest.raises(UserException):
-        Configuration(**data)
+    cfg = Configuration(**data)
+    assert cfg.command is None  # presence is enforced at run(), not construction

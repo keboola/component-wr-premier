@@ -20,7 +20,7 @@ class Configuration(BaseModel):
     max_retries: int = 5
 
     # --- write target (row level) ---
-    command: str
+    command: str | None = None
     column_mapping: list[ColumnMap] = Field(default_factory=list)
     dedup_key_column: str | None = None
     continue_on_error: bool = True
