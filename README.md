@@ -23,6 +23,7 @@ to PREMIER, with the row's columns mapped to PREMIER parameters.
 | `#password`   | PREMIER user password (encrypted).                                           |
 | `id_uj`       | Accounting-unit GUID, sent as the `ID-UJ` header.                            |
 | `max_retries` | Optional. Number of API retries. Default `5`.                               |
+| `debug`       | Optional. Enable verbose DEBUG logging. Default `false`.                     |
 
 ### Write target (row level)
 
