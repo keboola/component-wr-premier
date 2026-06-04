@@ -114,3 +114,31 @@ def test_write_returns_response_unchanged():
     body = body if isinstance(body, str) else body.decode()
     assert '"inComm": "FA_OUT_ADD"' in body
     assert '"VARIABL": "2024001"' in body
+
+
+@responses.activate
+def test_list_write_commands_handles_empty_and_malformed_data():
+    responses.add(
+        responses.POST,
+        BASE,
+        json={
+            "Result": "OK",
+            "Data": [
+                "not-a-dict",
+                {"typ_prikazu": "IN"},  # missing nazov -> skipped
+                {"nazov": "", "typ_prikazu": "IN"},  # empty nazov -> skipped
+                {"nazov": "SKLAD_ADD", "typ_prikazu": "IN"},  # kept
+            ],
+        },
+        status=200,
+    )
+    client = make_client()
+    assert client.list_write_commands() == ["SKLAD_ADD"]
+
+
+@responses.activate
+def test_test_connection_propagates_auth_error():
+    responses.add(responses.POST, BASE, status=401)
+    client = make_client()
+    with pytest.raises(PremierAuthError):
+        client.test_connection()
