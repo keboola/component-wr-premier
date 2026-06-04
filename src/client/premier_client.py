@@ -22,7 +22,7 @@ class PremierResponse:
         return "; ".join(str(e.get("desc", "")) for e in self.errors)
 
     @classmethod
-    def from_dict(cls, raw: dict) -> "PremierResponse":
+    def from_dict(cls, raw: dict) -> PremierResponse:
         return cls(
             result=raw.get("Result", ""),
             data=raw.get("Data", []) or [],
@@ -73,9 +73,7 @@ class PremierClient(HttpClient):
         except requests.RequestException as e:
             status = e.response.status_code if e.response is not None else None
             if status in (401, 403):
-                raise PremierAuthError(
-                    f"PREMIER rejected the credentials or ID-UJ (HTTP {status})."
-                ) from e
+                raise PremierAuthError(f"PREMIER rejected the credentials or ID-UJ (HTTP {status}).") from e
             raise PremierClientError(f"PREMIER API request failed (HTTP {status}).") from e
         return PremierResponse.from_dict(raw)
 
@@ -83,17 +81,13 @@ class PremierClient(HttpClient):
         """Validate host reachability + Basic auth + ID-UJ via a harmless read command."""
         resp = self.call("VERZEAPI")
         if not resp.is_ok:
-            raise PremierClientError(
-                f"PREMIER connection check failed: {resp.error_message or 'unexpected response'}"
-            )
+            raise PremierClientError(f"PREMIER connection check failed: {resp.error_message or 'unexpected response'}")
 
     def list_write_commands(self) -> list[str]:
         """Return the live catalog of write (`typ_prikazu == "IN"`) command names via INFO."""
         resp = self.call("INFO", {"prikaz": "FULL"})
         if not resp.is_ok:
-            raise PremierClientError(
-                f"Could not list PREMIER commands: {resp.error_message or 'unexpected response'}"
-            )
+            raise PremierClientError(f"Could not list PREMIER commands: {resp.error_message or 'unexpected response'}")
         return [
             str(item["nazov"])
             for item in resp.data

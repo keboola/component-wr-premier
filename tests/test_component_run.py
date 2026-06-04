@@ -38,7 +38,10 @@ def _write_datadir(tmp_path, rows, continue_on_error=True, state=None, command="
     }
     if command is not None:
         params["command"] = command
-    config = {"parameters": params, "storage": {"input": {"tables": [{"source": "in.c-main.src", "destination": "src.csv"}]}}}
+    config = {
+        "parameters": params,
+        "storage": {"input": {"tables": [{"source": "in.c-main.src", "destination": "src.csv"}]}},
+    }
     (data_dir / "config.json").write_text(json.dumps(config))
     if state is not None:
         (data_dir / "in" / "state.json").write_text(json.dumps(state))
