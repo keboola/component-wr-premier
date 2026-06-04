@@ -1,19 +1,63 @@
 {
   "type": "object",
-  "title": "extractor configuration",
-  "required": [
-    "print_hello"
-  ],
+  "title": "PREMIER Writer – Connection & Authentication",
+  "required": ["host", "port", "username", "#password", "id_uj"],
   "properties": {
-    "print_hello": {
-      "type": "boolean",
-      "title": "Print Hello",
+    "host": {
+      "type": "string",
+      "title": "PREMIER Host",
+      "description": "PREMIER server host or IP (e.g. dev.premier.cz).",
       "propertyOrder": 1
     },
-    "debug": {
-      "type": "boolean",
-      "title": "Debug",
+    "port": {
+      "type": "integer",
+      "title": "Port",
+      "description": "API port (the public sandbox uses 12375).",
+      "default": 443,
       "propertyOrder": 2
+    },
+    "use_https": {
+      "type": "boolean",
+      "title": "Use HTTPS",
+      "default": true,
+      "propertyOrder": 3
+    },
+    "username": {
+      "type": "string",
+      "title": "Username",
+      "description": "PREMIER user.",
+      "propertyOrder": 4
+    },
+    "#password": {
+      "type": "string",
+      "title": "Password",
+      "description": "PREMIER user password.",
+      "format": "password",
+      "propertyOrder": 5
+    },
+    "id_uj": {
+      "type": "string",
+      "title": "Accounting Unit (ID-UJ)",
+      "description": "Accounting-unit GUID sent as the ID-UJ header.",
+      "propertyOrder": 6
+    },
+    "test_connection": {
+      "type": "button",
+      "format": "test-connection",
+      "propertyOrder": 7,
+      "options": {
+        "async": {
+          "label": "Test Connection",
+          "action": "testConnection"
+        }
+      }
+    },
+    "max_retries": {
+      "type": "integer",
+      "title": "Max Retries",
+      "description": "Number of API retries on transient errors.",
+      "default": 5,
+      "propertyOrder": 8
     }
   }
 }
