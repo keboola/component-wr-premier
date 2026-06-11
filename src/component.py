@@ -2,6 +2,7 @@
 
 import csv
 import logging
+from collections.abc import Iterator
 
 from keboola.component.base import ComponentBase, sync_action
 from keboola.component.exceptions import UserException
@@ -33,7 +34,7 @@ class Component(ComponentBase):
         params = Configuration(**self.configuration.parameters)
         if not params.command:
             raise UserException("No PREMIER command selected for this configuration row.")
-        self._require_connection(params)
+        params.require_connection()
         client = self._build_client(params)
 
         input_tables = self.get_input_tables_definitions()
@@ -57,8 +58,12 @@ class Component(ComponentBase):
         skipped = 0
 
         try:
+            try:
+                inp = open(input_table.full_path, encoding="utf-8")
+            except OSError as e:
+                raise UserException(f"Failed to open input table '{input_table.full_path}': {e}") from e
             with (
-                open(input_table.full_path, encoding="utf-8") as inp,
+                inp,
                 open(results_def.full_path, "w", encoding="utf-8", newline="") as out,
             ):
                 reader = csv.DictReader(inp)
@@ -66,7 +71,8 @@ class Component(ComponentBase):
                 writer = csv.DictWriter(out, fieldnames=RESULTS_COLUMNS)
                 writer.writeheader()
 
-                for idx, row in enumerate(reader):
+                rows = self._iter_rows(reader, input_table.full_path)
+                for idx, row in rows:
                     # A blank dedup cell means "no dedup for this row" (do not collapse blanks together).
                     dedup_key = (row.get(params.dedup_key_column) or None) if params.dedup_key_column else None
 
@@ -119,22 +125,15 @@ class Component(ComponentBase):
             raise UserException(f"All {failures} rows failed to write to PREMIER. See the results table.")
 
     @staticmethod
-    def _require_connection(params: Configuration) -> None:
-        missing = [
-            name
-            for name, value in (
-                ("host", params.host),
-                ("username", params.username),
-                ("#password", params.password),
-                ("accounting unit (ID-UJ)", params.id_uj),
-            )
-            if not value
-        ]
-        if missing:
-            raise UserException(f"Missing required connection setting(s): {', '.join(missing)}.")
+    def _iter_rows(reader: csv.DictReader, path: str) -> Iterator[tuple[int, dict]]:
+        """Yield (index, row) and map lazy CSV/decoding read errors to a clean exit-1 UserException."""
+        try:
+            yield from enumerate(reader)
+        except (UnicodeDecodeError, csv.Error) as e:
+            raise UserException(f"Failed to read input table '{path}': {e}") from e
 
     @staticmethod
-    def _result(idx: int, dedup_key: str | None, status: str, message: str) -> dict:
+    def _result(idx: int, dedup_key: str | None, status: str, message: str) -> dict[str, str | int]:
         return {"row_index": idx, "dedup_key": dedup_key or "", "status": status, "message": message}
 
     @staticmethod
@@ -161,23 +160,23 @@ class Component(ComponentBase):
     @sync_action("testConnection")
     def test_connection(self) -> ValidationResult:
         params = Configuration(**self.configuration.parameters)
-        self._require_connection(params)
+        params.require_connection()
         client = self._build_client(params)
         try:
             client.test_connection()
         except (PremierAuthError, PremierClientError) as e:
-            raise UserException(str(e))
+            raise UserException(str(e)) from e
         return ValidationResult("Connection to PREMIER established.")
 
     @sync_action("listCommands")
     def list_commands(self) -> list[SelectElement]:
         params = Configuration(**self.configuration.parameters)
-        self._require_connection(params)
+        params.require_connection()
         client = self._build_client(params)
         try:
             commands = client.list_write_commands()
         except (PremierAuthError, PremierClientError) as e:
-            raise UserException(str(e))
+            raise UserException(str(e)) from e
         return [SelectElement(value=c, label=c) for c in commands]
 
 

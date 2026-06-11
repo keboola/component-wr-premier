@@ -109,11 +109,7 @@ class PremierClient(HttpClient):
                         if isinstance(cmd_info, dict):
                             comm_list.append(cmd_info)
 
-        return [
-            str(item["nazov"])
-            for item in comm_list
-            if item.get("typ_prikazu") == "IN" and item.get("nazov")
-        ]
+        return [str(item["nazov"]) for item in comm_list if item.get("typ_prikazu") == "IN" and item.get("nazov")]
 
     def write(self, command: str, parameters: dict) -> PremierResponse:
         """Issue a single write/create command. The caller inspects `is_ok` / `error_message`."""

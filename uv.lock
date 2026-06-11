@@ -577,7 +577,6 @@ wheels = [
 name = "wr-premier"
 source = { virtual = "." }
 dependencies = [
-    { name = "freezegun" },
     { name = "keboola-component" },
     { name = "keboola-http-client" },
     { name = "keboola-utils" },
@@ -594,7 +593,6 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "freezegun", specifier = ">=1.5.1" },
     { name = "keboola-component", specifier = ">=1.9.0" },
     { name = "keboola-http-client", specifier = ">=1.0.1" },
     { name = "keboola-utils", specifier = ">=1.1.0" },

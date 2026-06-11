@@ -40,3 +40,22 @@ class Configuration(BaseModel):
     def mapping_as_dict(self) -> dict[str, str]:
         """input-column -> PREMIER-parameter."""
         return {m.source: m.target for m in self.column_mapping}
+
+    def require_connection(self) -> None:
+        """Validate that all connection/auth fields are present.
+
+        ``command`` intentionally stays optional — the sync actions
+        (testConnection, listCommands) run before a command is chosen.
+        """
+        missing = [
+            name
+            for name, value in (
+                ("host", self.host),
+                ("username", self.username),
+                ("#password", self.password),
+                ("accounting unit (ID-UJ)", self.id_uj),
+            )
+            if not value
+        ]
+        if missing:
+            raise UserException(f"Missing required connection setting(s): {', '.join(missing)}.")
