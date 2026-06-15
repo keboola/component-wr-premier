@@ -29,13 +29,15 @@ RESULTS_COLUMNS = ["row_index", "dedup_key", "status", "message"]
 class Component(ComponentBase):
     def __init__(self):
         super().__init__()
+        self.params = Configuration(**self.configuration.parameters)
+        self.client = self._build_client(self.params)
 
     def run(self) -> None:
-        params = Configuration(**self.configuration.parameters)
+        params = self.params
         if not params.command:
             raise UserException("No PREMIER command selected for this configuration row.")
         params.require_connection()
-        client = self._build_client(params)
+        client = self.client
 
         input_tables = self.get_input_tables_definitions()
         if not input_tables:
@@ -159,22 +161,18 @@ class Component(ComponentBase):
 
     @sync_action("testConnection")
     def test_connection(self) -> ValidationResult:
-        params = Configuration(**self.configuration.parameters)
-        params.require_connection()
-        client = self._build_client(params)
+        self.params.require_connection()
         try:
-            client.test_connection()
+            self.client.test_connection()
         except (PremierAuthError, PremierClientError) as e:
             raise UserException(str(e)) from e
         return ValidationResult("Connection to PREMIER established.")
 
     @sync_action("listCommands")
     def list_commands(self) -> list[SelectElement]:
-        params = Configuration(**self.configuration.parameters)
-        params.require_connection()
-        client = self._build_client(params)
+        self.params.require_connection()
         try:
-            commands = client.list_write_commands()
+            commands = self.client.list_write_commands()
         except (PremierAuthError, PremierClientError) as e:
             raise UserException(str(e)) from e
         return [SelectElement(value=c, label=c) for c in commands]
