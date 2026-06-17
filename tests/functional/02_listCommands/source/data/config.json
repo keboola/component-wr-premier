@@ -1,0 +1,11 @@
+{
+  "action": "listCommands",
+  "parameters": {
+    "host": "dev.premier.cz",
+    "port": 12375,
+    "use_https": true,
+    "username": "DUMMY_USER",
+    "#password": "DUMMY_PASS",
+    "id_uj": "DUMMY_ID_UJ"
+  }
+}

@@ -1,1 +1,58 @@
-{}
+{
+  "type": "object",
+  "title": "PREMIER Writer – Write Target",
+  "required": ["command", "column_mapping"],
+  "properties": {
+    "command": {
+      "type": "string",
+      "title": "PREMIER Command",
+      "description": "The write command to execute (e.g. FA_OUT_ADD).",
+      "format": "select",
+      "enum": [],
+      "options": {
+        "async": {
+          "label": "Load Commands",
+          "action": "listCommands",
+          "autoload": []
+        }
+      },
+      "propertyOrder": 1
+    },
+    "column_mapping": {
+      "type": "array",
+      "title": "Column Mapping",
+      "description": "Map input table columns to PREMIER parameter names.",
+      "format": "table",
+      "items": {
+        "type": "object",
+        "required": ["source", "target"],
+        "properties": {
+          "source": {
+            "type": "string",
+            "title": "Input Column",
+            "propertyOrder": 1
+          },
+          "target": {
+            "type": "string",
+            "title": "PREMIER Parameter",
+            "propertyOrder": 2
+          }
+        }
+      },
+      "propertyOrder": 2
+    },
+    "dedup_key_column": {
+      "type": "string",
+      "title": "Deduplication Key Column",
+      "description": "Optional input column used as a natural key so re-runs skip already-written rows. Leave empty to re-send every row (may create duplicates).",
+      "propertyOrder": 3
+    },
+    "continue_on_error": {
+      "type": "boolean",
+      "title": "Continue On Error",
+      "description": "If enabled, failed rows are recorded and the job continues; otherwise it aborts on the first failure.",
+      "default": true,
+      "propertyOrder": 4
+    }
+  }
+}

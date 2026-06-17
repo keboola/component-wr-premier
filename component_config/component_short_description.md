@@ -1,1 +1,1 @@
-Enter short description of the component here.
+Writes Keboola Storage tables into the PREMIER system (Czech ERP) via its API.
