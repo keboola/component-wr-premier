@@ -12,10 +12,13 @@ dependencies = [
 
 [dependency-groups]
 dev = [
+    "freezegun>=1.5.1",
     "keboola.datadirtest>=2.0.0",
+    "pre-commit>=4.5.0",
     "pytest>=9.0.2",
     "responses>=0.25.0",
     "ruff>=0.15.2",
+    "ty>=0.0.24",
 ]
 
 [tool.ruff]
@@ -23,3 +26,10 @@ line-length = 120
 
 [tool.ruff.lint]
 extend-select = ["I", "UP", "G"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+
+[tool.ty.environment]
+extra-paths = ["src"]
