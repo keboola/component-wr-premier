@@ -1,0 +1,12 @@
+{
+    "id": "in.c-premier.invoices",
+    "name": "invoices",
+    "primary_key": [
+        "doc_number"
+    ],
+    "columns": [
+        "doc_number",
+        "variable_symbol",
+        "vat_code"
+    ]
+}
